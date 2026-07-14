@@ -58,7 +58,7 @@
         const nowPlayingText = document.getElementById('nowPlayingText');
         const resultsContainer = document.getElementById('results');
 
-        // Lista de servere "rezervă". Dacă unul pică, trece la următorul automat.
+        // Lista de servere de rezervă
         const API_SERVERS = [
             'https://pipedapi.smnz.de',
             'https://pipedapi.kavin.rocks',
@@ -66,7 +66,7 @@
             'https://pipedapi.leptons.xyz'
         ];
 
-        // Funcția inteligentă care testează serverele
+        // Funcție inteligentă care trece la următorul server dacă unul e picat
         async function fetchWithFallback(endpoint) {
             for (let server of API_SERVERS) {
                 try {
@@ -75,10 +75,10 @@
                         return await response.json();
                     }
                 } catch (error) {
-                    console.log(`Serverul ${server} nu răspunde. Trecem la următorul...`);
+                    console.log(`Serverul ${server} nu a răspuns. Se încearcă următorul...`);
                 }
             }
-            throw new Error('Toate serverele sunt indisponibile momentan.');
+            throw new Error('Toate serverele sunt aglomerate.');
         }
 
         async function searchMusic() {
@@ -115,7 +115,7 @@
                 });
             } catch (error) {
                 console.error(error);
-                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare de conexiune cu toate serverele.</p>';
+                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">A apărut o eroare de rețea. Mai încearcă o dată.</p>';
             }
         }
 
@@ -134,7 +134,7 @@
                     nowPlayingText.innerText = "Eroare: Nu am putut extrage sunetul.";
                 }
             } catch (error) {
-                nowPlayingText.innerText = "Eroare la redare. Serverele sunt aglomerate.";
+                nowPlayingText.innerText = "Eroare la redare. Încearcă altă piesă.";
             }
         }
 
@@ -148,129 +148,11 @@
                     const cache = await caches.open('muzica-offline-v1');
                     
                     await cache.add(audioStream.url);
-                    alert('Salvat cu succes! Poți asculta offline.');
+                    alert('Salvat cu succes! Melodia a rămas în memoria telefonului.');
                 }
             } catch (error) {
                 console.error(error);
-                alert('Eroare la descărcare. Incearcă din nou mai târziu.');
-            }
-        }
-    </script>
-</body>
-</html>
-    </style>
-</head>
-<body>
-
-    <header>
-        <h1>Muzica Mea</h1>
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Caută melodii..." autocomplete="off">
-            <button onclick="searchMusic()">Caută</button>
-        </div>
-    </header>
-
-    <div id="results">
-        <p style="color: #b3b3b3; text-align: center; margin-top: 20px;">Caută ceva pentru a începe.</p>
-    </div>
-
-    <div id="player-container">
-        <div class="now-playing" id="nowPlayingText">Nicio melodie redată</div>
-        <audio id="audioPlayer" controls></audio>
-    </div>
-
-    <script>
-        // Inregistrarea Service Worker pentru PWA si cache offline
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.error('Eroare SW:', err));
-        }
-
-        const audioPlayer = document.getElementById('audioPlayer');
-        const nowPlayingText = document.getElementById('nowPlayingText');
-        const resultsContainer = document.getElementById('results');
-
-        // URL-ul API-ului public Piped
-        const API_BASE = 'https://pipedapi.kavin.rocks'; 
-
-        // 1. Cautarea muzicii
-        async function searchMusic() {
-            const query = document.getElementById('searchInput').value;
-            if (!query) return;
-
-            resultsContainer.innerHTML = '<p style="color: #b3b3b3; text-align: center;">Se caută pe YouTube...</p>';
-
-            try {
-                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&filter=music_songs`);
-                const data = await response.json();
-                
-                resultsContainer.innerHTML = '';
-                
-                if (!data.items || data.items.length === 0) {
-                    resultsContainer.innerHTML = '<p style="color: #b3b3b3; text-align: center;">Nu am găsit rezultate.</p>';
-                    return;
-                }
-
-                data.items.forEach(track => {
-                    const trackDiv = document.createElement('div');
-                    trackDiv.className = 'track';
-                    
-                    const videoId = track.url.split('watch?v=')[1];
-                    const safeTitle = track.title.replace(/'/g, "\\'").replace(/"/g, "&quot;"); 
-
-                    trackDiv.innerHTML = `
-                        <div class="track-info" onclick="playTrack('${safeTitle}', '${videoId}')" style="flex: 1; min-width: 0;">
-                            <span class="track-title">${track.title}</span>
-                            <span class="track-artist">${track.uploaderName}</span>
-                        </div>
-                        <button class="cache-btn" onclick="cacheStream('${safeTitle}', '${videoId}')">Salvează</button>
-                    `;
-                    resultsContainer.appendChild(trackDiv);
-                });
-            } catch (error) {
-                console.error(error);
-                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare de conexiune cu serverul.</p>';
-            }
-        }
-
-        // 2. Redarea Audio
-        async function playTrack(title, videoId) {
-            nowPlayingText.innerText = "Se încarcă: " + title;
-            
-            try {
-                const response = await fetch(`${API_BASE}/streams/${videoId}`);
-                const data = await response.json();
-                
-                if (data.audioStreams && data.audioStreams.length > 0) {
-                    // Alegem cel mai bun format audio (m4a sau webm)
-                    const audioStream = data.audioStreams.find(s => s.mimeType.includes('m4a')) || data.audioStreams[0];
-                    audioPlayer.src = audioStream.url;
-                    audioPlayer.play();
-                    nowPlayingText.innerText = "Se redă: " + title;
-                } else {
-                    nowPlayingText.innerText = "Eroare: Nu am putut extrage sunetul.";
-                }
-            } catch (error) {
-                nowPlayingText.innerText = "Eroare la redare.";
-            }
-        }
-
-        // 3. Salvarea in Cache
-        async function cacheStream(title, videoId) {
-            alert('Se pregătește descărcarea pentru: ' + title);
-            try {
-                const response = await fetch(`${API_BASE}/streams/${videoId}`);
-                const data = await response.json();
-                
-                if (data.audioStreams && data.audioStreams.length > 0) {
-                    const audioStream = data.audioStreams.find(s => s.mimeType.includes('m4a')) || data.audioStreams[0];
-                    const cache = await caches.open('muzica-offline-v1');
-                    
-                    await cache.add(audioStream.url);
-                    alert('Salvat cu succes! Poți asculta fără net.');
-                }
-            } catch (error) {
-                console.error(error);
-                alert('Eroare la descărcare.');
+                alert('Eroare la descărcare. Serverul ar putea interzice salvarea în acest moment.');
             }
         }
     </script>
