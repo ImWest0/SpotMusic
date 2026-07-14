@@ -20,7 +20,7 @@
         .search-box input { background: transparent; border: none; color: white; font-size: 16px; width: 100%; outline: none; }
         .search-box input::placeholder { color: #888; }
         
-        .section-title { color: #f6c358; font-size: 13px; font-weight: bold; letter-spacing: 1px; padding: 0 20px 10px 20px; text-transform: uppercase; }
+        .section-title { color: #fce181; font-size: 13px; font-weight: bold; letter-spacing: 1px; padding: 0 20px 10px 20px; text-transform: uppercase; }
 
         #results { flex: 1; overflow-y: auto; padding: 0 20px 130px 20px; display: flex; flex-direction: column; gap: 12px; }
         .track { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1a1a1a; cursor: pointer; }
@@ -29,8 +29,8 @@
         .track-info { display: flex; flex-direction: column; overflow: hidden; flex: 1; padding-right: 15px; justify-content: center; }
         .track-title { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
         .track-artist { font-size: 13px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
-        .cache-btn { background-color: transparent; color: #f6c358; border: 1px solid #f6c358; border-radius: 15px; padding: 6px 12px; font-size: 11px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
-        .cache-btn:active { background-color: #f6c358; color: black; }
+        .cache-btn { background-color: transparent; color: #fce181; border: 1px solid #fce181; border-radius: 15px; padding: 6px 12px; font-size: 11px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+        .cache-btn:active { background-color: #fce181; color: black; }
 
         #custom-player { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #121212; border-top: 1px solid #222; padding: 15px 20px 25px 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; }
         .player-info-row { display: flex; align-items: center; gap: 15px; }
@@ -72,11 +72,11 @@
 
     <div class="search-wrapper">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Caută piese sau artiști (ex. RAVA)..." autocomplete="off" onkeypress="handleKeyPress(event)">
+            <input type="text" id="searchInput" placeholder="Caută piese (ex. RAVA)..." autocomplete="off" onkeypress="handleKeyPress(event)">
         </div>
     </div>
 
-    <div class="section-title">Rezultate YouTube</div>
+    <div class="section-title">Rezultate Globale</div>
 
     <div id="results">
         <p style="color: #555; text-align: center; margin-top: 20px; font-size: 14px;">Aștept să cauți o piesă...</p>
@@ -116,7 +116,7 @@
 
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.error('Eroare SW:', err));
+            navigator.serviceWorker.register('sw.js').catch(() => {});
         }
 
         const audioPlayer = document.getElementById('audioPlayer');
@@ -134,12 +134,14 @@
         const durationDisplay = document.getElementById('durationDisplay');
         const progressBarContainer = document.getElementById('progressBarContainer');
 
-        // INSTANȚE INVIDIOUS (Proiectul GitHub suprem pentru extragere)
-        const INSTANCES = [
-            'https://invidious.jing.rocks',
-            'https://invidious.nerdvpn.de',
-            'https://inv.tux.pizza'
+        // Servere Piped - Mult mai stabile pe audio decât Invidious
+        const SERVERS = [
+            'https://pipedapi.smnz.de',
+            'https://pipedapi.kavin.rocks'
         ];
+        
+        // Proxy pentru a trece de blocajele browserului
+        const PROXY_URL = 'https://api.allorigins.win/raw?url=';
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
@@ -148,61 +150,76 @@
             }
         }
 
-        async function fetchWithFallback(queryPath) {
-            for (let server of INSTANCES) {
+        // FUNCȚIE NOUĂ: Fetch cu limită de timp (Timeout) ca să nu mai înghețe
+        async function fetchWithTimeoutAndProxy(endpoint) {
+            for (let server of SERVERS) {
+                const targetUrl = server + endpoint;
+                const proxiedUrl = PROXY_URL + encodeURIComponent(targetUrl);
+                
                 try {
-                    const response = await fetch(`${server}${queryPath}`);
+                    const controller = new AbortController();
+                    // Dacă serverul nu răspunde în 6 secunde, îl oprim forțat
+                    const timeoutId = setTimeout(() => controller.abort(), 6000);
+                    
+                    const response = await fetch(proxiedUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
                     if (response.ok) return await response.json();
-                } catch (error) { console.log(`${server} nu a răspuns.`); }
+                } catch (error) {
+                    console.log(`Serverul ${server} e picat sau prea lent. Trec la următorul...`);
+                }
             }
-            throw new Error('Toate serverele Invidious sunt ocupate.');
+            throw new Error('Toate serverele sunt blocate momentan.');
         }
 
         async function searchMusic() {
             const query = searchInput.value.trim();
             if (!query) return;
 
-            resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Se descarcă din baza YouTube...</p>';
+            resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Se conectează la servere...</p>';
 
             try {
-                // Căutare directă pe YouTube via Invidious API
-                const data = await fetchWithFallback(`/api/v1/search?q=${encodeURIComponent(query)}&type=video`);
+                const data = await fetchWithTimeoutAndProxy(`/search?q=${encodeURIComponent(query)}&filter=music_songs`);
                 resultsContainer.innerHTML = '';
                 
-                if (!data || data.length === 0) {
-                    resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Niciun rezultat.</p>';
+                if (!data || !data.items || data.items.length === 0) {
+                    resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Niciun rezultat găsit.</p>';
                     return;
                 }
 
-                data.forEach(track => {
+                data.items.forEach(track => {
+                    const videoId = track.url.split('watch?v=')[1];
                     const safeTitle = track.title.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const safeArtist = track.author.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const coverUrl = track.videoThumbnails.find(t => t.quality === 'medium')?.url || track.videoThumbnails[0].url;
+                    const safeArtist = track.uploaderName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const coverUrl = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`; 
 
                     const trackDiv = document.createElement('div');
                     trackDiv.className = 'track';
                     trackDiv.innerHTML = `
                         <img src="${coverUrl}" class="track-img" alt="cover">
-                        <div class="track-info" onclick="playDirectly('${safeTitle}', '${safeArtist}', '${track.videoId}', '${coverUrl}')">
+                        <div class="track-info" onclick="fetchAndPlay('${safeTitle}', '${safeArtist}', '${videoId}', '${coverUrl}')">
                             <div class="track-title">${track.title}</div>
-                            <div class="track-artist">${track.author}</div>
+                            <div class="track-artist">${track.uploaderName}</div>
                         </div>
-                        <button class="cache-btn" onclick="cacheDirectly('${safeTitle}', '${track.videoId}')">Descarcă</button>
+                        <button class="cache-btn" onclick="fetchAndCache('${safeTitle}', '${videoId}')">Descarcă</button>
                     `;
                     resultsContainer.appendChild(trackDiv);
                 });
             } catch (error) {
-                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare. Verifică conexiunea.</p>';
+                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare: Serverele sunt suprasolicitate. Mai încearcă o dată.</p>';
             }
         }
 
-        // REDARE DIRECTĂ (Sari peste proxy, folosește itag 140 m4a standard YouTube)
-        function getDirectAudioUrl(videoId) {
-            // Primul server din listă redirecționează automat către stream-ul audio curat
-            return `${INSTANCES[0]}/latest_version?id=${videoId}&itag=140`;
+        async function getAudioUrl(videoId) {
+            const data = await fetchWithTimeoutAndProxy(`/streams/${videoId}`);
+            if (data.audioStreams && data.audioStreams.length > 0) {
+                // Returnează direct stream-ul audio m4a care merge pe S25 Ultra perfect
+                return data.audioStreams.find(s => s.mimeType.includes('m4a'))?.url || data.audioStreams[0].url;
+            }
+            throw new Error("Fără stream audio.");
         }
 
-        function playDirectly(title, artist, videoId, cover) {
+        async function fetchAndPlay(title, artist, videoId, cover) {
             playerTitle.innerText = title;
             playerArtist.innerText = artist;
             playerCover.src = cover;
@@ -211,28 +228,32 @@
             pauseIcon.style.display = 'none';
             playerLoader.style.display = 'block';
 
-            const audioUrl = getDirectAudioUrl(videoId);
-            audioPlayer.src = audioUrl;
-            
-            audioPlayer.play().then(() => {
-                updatePlayPauseUI(true);
-            }).catch(e => {
-                playerTitle.innerText = "Blocat de server. Încearcă altă piesă.";
+            try {
+                const finalAudioUrl = await getAudioUrl(videoId);
+                audioPlayer.src = finalAudioUrl;
+                audioPlayer.play().then(() => {
+                    updatePlayPauseUI(true);
+                }).catch(() => {
+                    playerTitle.innerText = "Eroare la pornire. Încearcă din nou.";
+                    updatePlayPauseUI(false);
+                });
+            } catch (error) {
+                playerTitle.innerText = "Eroare de extragere.";
                 updatePlayPauseUI(false);
-            });
+            }
         }
 
-        async function cacheDirectly(title, videoId) {
-            alert(`Se descarcă în memoria telefonului: ${title}`);
+        async function fetchAndCache(title, videoId) {
+            alert(`Caut sursa audio pentru descărcare: ${title}`);
             try {
-                const audioUrl = getDirectAudioUrl(videoId);
+                const finalAudioUrl = await getAudioUrl(videoId);
                 const cache = await caches.open('muzica-offline-v1');
                 
-                // Cerem fișierul audio și îl băgăm direct în cache
-                await cache.add(audioUrl);
-                alert(`Succes! Melodia poate fi ascultată offline.`);
+                // Salvăm direct link-ul curat în memoria telefonului
+                await cache.add(finalAudioUrl);
+                alert(`Perfect! Melodia a fost pusă în cache-ul telefonului.`);
             } catch (error) {
-                alert(`Eroare. Cache-ul browserului a refuzat fișierul.`);
+                alert(`Eroare. Browserul tău nu a putut accesa fișierul brut.`);
             }
         }
 
