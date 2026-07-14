@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Muzica Mea</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #121212; color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Header & Search */
+        header { padding: 20px; background: linear-gradient(to bottom, #1db95444, #121212); }
+        h1 { font-size: 24px; margin-bottom: 15px; font-weight: bold; }
+        .search-container { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 12px 15px; border-radius: 20px; border: none; background-color: #242424; color: white; font-size: 16px; outline: none; }
+        input[type="text"]:focus { background-color: #333333; }
+        button { padding: 12px 20px; border-radius: 20px; border: none; background-color: #1db954; color: black; font-weight: bold; font-size: 16px; cursor: pointer; }
+        button:active { transform: scale(0.95); }
+
+        /* Lista de melodii */
+        #results { flex: 1; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
+        .track { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #181818; border-radius: 8px; cursor: pointer; }
+        .track:hover { background-color: #282828; }
+        .track-info { display: flex; flex-direction: column; overflow: hidden; }
+        .track-title { font-size: 16px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .track-artist { font-size: 14px; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cache-btn { background-color: transparent; color: #1db954; border: 1px solid #1db954; padding: 6px 12px; font-size: 12px; flex-shrink: 0; margin-left: 10px; }
+        .cache-btn:active { background-color: #1db954; color: black; }
+
+        /* Player Audio */
+        #player-container { padding: 15px 20px; background-color: #181818; border-top: 1px solid #282828; display: flex; flex-direction: column; gap: 10px; }
+        .now-playing { font-size: 14px; font-weight: bold; text-align: center; color: #1db954; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        audio { width: 100%; outline: none; }
+        audio::-webkit-media-controls-panel { background-color: #242424; color: white; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Muzica Mea</h1>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Caută melodii..." autocomplete="off">
+            <button onclick="searchMusic()">Caută</button>
+        </div>
+    </header>
+
+    <div id="results">
+        <p style="color: #b3b3b3; text-align: center; margin-top: 20px;">Caută ceva pentru a începe.</p>
+    </div>
+
+    <div id="player-container">
+        <div class="now-playing" id="nowPlayingText">Nicio melodie redată</div>
+        <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <script>
+        // Inregistrarea Service Worker pentru PWA si cache offline
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.error('Eroare SW:', err));
+        }
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        const nowPlayingText = document.getElementById('nowPlayingText');
+        const resultsContainer = document.getElementById('results');
+
+        // URL-ul API-ului public Piped
+        const API_BASE = 'https://pipedapi.kavin.rocks'; 
+
+        // 1. Cautarea muzicii
+        async function searchMusic() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
+
+            resultsContainer.innerHTML = '<p style="color: #b3b3b3; text-align: center;">Se caută pe YouTube...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&filter=music_songs`);
+                const data = await response.json();
+                
+                resultsContainer.innerHTML = '';
+                
+                if (!data.items || data.items.length === 0) {
+                    resultsContainer.innerHTML = '<p style="color: #b3b3b3; text-align: center;">Nu am găsit rezultate.</p>';
+                    return;
+                }
+
+                data.items.forEach(track => {
+                    const trackDiv = document.createElement('div');
+                    trackDiv.className = 'track';
+                    
+                    const videoId = track.url.split('watch?v=')[1];
+                    const safeTitle = track.title.replace(/'/g, "\\'").replace(/"/g, "&quot;"); 
+
+                    trackDiv.innerHTML = `
+                        <div class="track-info" onclick="playTrack('${safeTitle}', '${videoId}')" style="flex: 1; min-width: 0;">
+                            <span class="track-title">${track.title}</span>
+                            <span class="track-artist">${track.uploaderName}</span>
+                        </div>
+                        <button class="cache-btn" onclick="cacheStream('${safeTitle}', '${videoId}')">Salvează</button>
+                    `;
+                    resultsContainer.appendChild(trackDiv);
+                });
+            } catch (error) {
+                console.error(error);
+                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare de conexiune cu serverul.</p>';
+            }
+        }
+
+        // 2. Redarea Audio
+        async function playTrack(title, videoId) {
+            nowPlayingText.innerText = "Se încarcă: " + title;
+            
+            try {
+                const response = await fetch(`${API_BASE}/streams/${videoId}`);
+                const data = await response.json();
+                
+                if (data.audioStreams && data.audioStreams.length > 0) {
+                    // Alegem cel mai bun format audio (m4a sau webm)
+                    const audioStream = data.audioStreams.find(s => s.mimeType.includes('m4a')) || data.audioStreams[0];
+                    audioPlayer.src = audioStream.url;
+                    audioPlayer.play();
+                    nowPlayingText.innerText = "Se redă: " + title;
+                } else {
+                    nowPlayingText.innerText = "Eroare: Nu am putut extrage sunetul.";
+                }
+            } catch (error) {
+                nowPlayingText.innerText = "Eroare la redare.";
+            }
+        }
+
+        // 3. Salvarea in Cache
+        async function cacheStream(title, videoId) {
+            alert('Se pregătește descărcarea pentru: ' + title);
+            try {
+                const response = await fetch(`${API_BASE}/streams/${videoId}`);
+                const data = await response.json();
+                
+                if (data.audioStreams && data.audioStreams.length > 0) {
+                    const audioStream = data.audioStreams.find(s => s.mimeType.includes('m4a')) || data.audioStreams[0];
+                    const cache = await caches.open('muzica-offline-v1');
+                    
+                    await cache.add(audioStream.url);
+                    alert('Salvat cu succes! Poți asculta fără net.');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Eroare la descărcare.');
+            }
+        }
+    </script>
+</body>
+</html>
