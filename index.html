@@ -3,62 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Muzica Mea</title>
+    <title>Audi Music</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#121212">
+    <meta name="theme-color" content="#0a0510">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #121212; color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { padding: 20px; background: linear-gradient(to bottom, #1db95444, #121212); }
-        h1 { font-size: 24px; margin-bottom: 15px; font-weight: bold; }
-        .search-container { display: flex; gap: 10px; }
-        input[type="text"] { flex: 1; padding: 12px 15px; border-radius: 20px; border: none; background-color: #242424; color: white; font-size: 16px; outline: none; }
-        input[type="text"]:focus { background-color: #333333; }
-        button { padding: 12px 20px; border-radius: 20px; border: none; background-color: #1db954; color: black; font-weight: bold; font-size: 16px; cursor: pointer; }
-        button:active { transform: scale(0.95); }
-        #results { flex: 1; overflow-y: auto; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
-        .track { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #181818; border-radius: 8px; cursor: pointer; }
-        .track:hover { background-color: #282828; }
-        .track-info { display: flex; flex-direction: column; overflow: hidden; }
-        .track-title { font-size: 16px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .track-artist { font-size: 14px; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .cache-btn { background-color: transparent; color: #1db954; border: 1px solid #1db954; padding: 6px 12px; font-size: 12px; flex-shrink: 0; margin-left: 10px; }
-        .cache-btn:active { background-color: #1db954; color: black; }
-        #player-container { padding: 15px 20px; background-color: #181818; border-top: 1px solid #282828; display: flex; flex-direction: column; gap: 10px; }
-        .now-playing { font-size: 14px; font-weight: bold; text-align: center; color: #1db954; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        audio { width: 100%; outline: none; }
-        audio::-webkit-media-controls-panel { background-color: #242424; color: white; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: linear-gradient(180deg, #13081e 0%, #000000 20%, #000000 100%); color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Header cu Logo și Setări */
+        header { padding: 20px 20px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .spacer { width: 24px; } /* Pentru centrare logo */
+        .logo-container { display: flex; justify-content: center; align-items: center; }
+        .settings-icon { fill: #b3b3b3; width: 24px; height: 24px; cursor: pointer; }
+        
+        /* Bara de căutare */
+        .search-wrapper { padding: 0 20px 20px 20px; }
+        .search-box { background-color: #1a1a1a; border-radius: 25px; border: 1px solid #333; padding: 15px 20px; display: flex; align-items: center; }
+        .search-box input { background: transparent; border: none; color: white; font-size: 16px; width: 100%; outline: none; }
+        .search-box input::placeholder { color: #888; }
+        
+        /* Titlu Secțiune */
+        .section-title { color: #f6c358; font-size: 13px; font-weight: bold; letter-spacing: 1px; padding: 0 20px 10px 20px; text-transform: uppercase; }
+
+        /* Lista de rezultate */
+        #results { flex: 1; overflow-y: auto; padding: 0 20px 120px 20px; display: flex; flex-direction: column; gap: 12px; }
+        .track { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1a1a1a; cursor: pointer; }
+        .track-info { display: flex; flex-direction: column; overflow: hidden; flex: 1; padding-right: 15px; }
+        .track-title { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+        .track-artist { font-size: 13px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+        .cache-btn { background-color: transparent; color: #f6c358; border: 1px solid #f6c358; border-radius: 15px; padding: 6px 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .cache-btn:active { background-color: #f6c358; color: black; }
+
+        /* Player Custom (Bottom) */
+        #custom-player { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #121212; border-top: 1px solid #222; padding: 15px 20px 25px 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; }
+        .player-info-row { display: flex; align-items: center; gap: 15px; }
+        .album-art-placeholder { width: 45px; height: 45px; background-color: #222; border-radius: 8px; flex-shrink: 0; }
+        .player-text { display: flex; flex-direction: column; overflow: hidden; }
+        .player-title { font-size: 15px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-subtitle { font-size: 13px; color: #b3b3b3; }
+        
+        /* Progress Bar */
+        .progress-row { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #888; }
+        .progress-bar-container { flex: 1; height: 4px; background-color: #333; border-radius: 2px; position: relative; cursor: pointer; }
+        .progress-fill { position: absolute; left: 0; top: 0; height: 100%; background-color: #b3b3b3; border-radius: 2px; width: 0%; }
+        
+        /* Controale Playback */
+        .controls-row { display: flex; justify-content: center; align-items: center; gap: 30px; }
+        .ctrl-btn { background: none; border: none; fill: #fff; width: 20px; height: 20px; cursor: pointer; }
+        .play-btn-wrapper { width: 55px; height: 55px; background-color: #fce181; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px rgba(252, 225, 129, 0.3); cursor: pointer; }
+        .play-icon { fill: #000; width: 22px; height: 22px; margin-left: 3px; }
+        .pause-icon { fill: #000; width: 22px; height: 22px; display: none; }
+        
+        /* Ascundem playerul nativ */
+        audio { display: none; }
     </style>
 </head>
 <body>
 
+    <!-- Header -->
     <header>
-        <h1>Muzica Mea</h1>
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Caută melodii..." autocomplete="off">
-            <button onclick="searchMusic()">Caută</button>
+        <div class="spacer"></div>
+        <div class="logo-container">
+            <!-- Logo Audi desenat din cod (SVG) -->
+            <svg width="100" height="35" viewBox="0 0 140 40" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="25" cy="20" r="16" stroke="#fce181" stroke-width="3" fill="none"/>
+                <circle cx="55" cy="20" r="16" stroke="#fce181" stroke-width="3" fill="none"/>
+                <circle cx="85" cy="20" r="16" stroke="#fce181" stroke-width="3" fill="none"/>
+                <circle cx="115" cy="20" r="16" stroke="#fce181" stroke-width="3" fill="none"/>
+            </svg>
         </div>
+        <svg class="settings-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+        </svg>
     </header>
 
-    <div id="results">
-        <p style="color: #b3b3b3; text-align: center; margin-top: 20px;">Caută ceva pentru a începe.</p>
+    <!-- Bara de Căutare -->
+    <div class="search-wrapper">
+        <div class="search-box">
+            <!-- onkeypress detectează când apeși Enter pe tastatura telefonului -->
+            <input type="text" id="searchInput" placeholder="Caută orice pe YouTube..." autocomplete="off" onkeypress="handleKeyPress(event)">
+        </div>
     </div>
 
-    <div id="player-container">
-        <div class="now-playing" id="nowPlayingText">Nicio melodie redată</div>
-        <audio id="audioPlayer" controls></audio>
+    <!-- Titlu -->
+    <div class="section-title">Melodii descărcate / Istoric</div>
+
+    <!-- Zona Rezultate -->
+    <div id="results">
+        <p style="color: #555; text-align: center; margin-top: 20px; font-size: 14px;">Aștept să cauți o piesă...</p>
     </div>
+
+    <!-- Player Audio Custom -->
+    <div id="custom-player">
+        <div class="player-info-row">
+            <div class="album-art-placeholder"></div>
+            <div class="player-text">
+                <span class="player-title" id="playerTitle">Alege o melodie</span>
+                <span class="player-subtitle" id="playerArtist">YouTube Stream</span>
+            </div>
+        </div>
+        
+        <div class="progress-row">
+            <span id="currentTimeDisplay">0:00</span>
+            <div class="progress-bar-container" id="progressBarContainer" onclick="seekAudio(event)">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span id="durationDisplay">0:00</span>
+        </div>
+
+        <div class="controls-row">
+            <svg class="ctrl-btn" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+            
+            <div class="play-btn-wrapper" onclick="togglePlay()">
+                <svg class="play-icon" id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="pause-icon" id="pauseIcon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </div>
+            
+            <svg class="ctrl-btn" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </div>
+    </div>
+
+    <!-- Playerul real ascuns -->
+    <audio id="audioPlayer"></audio>
 
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.error('Eroare SW:', err));
         }
 
+        // Referințe elemente
         const audioPlayer = document.getElementById('audioPlayer');
-        const nowPlayingText = document.getElementById('nowPlayingText');
         const resultsContainer = document.getElementById('results');
+        const searchInput = document.getElementById('searchInput');
+        
+        // Referințe Player Custom
+        const playerTitle = document.getElementById('playerTitle');
+        const playerArtist = document.getElementById('playerArtist');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const progressFill = document.getElementById('progressFill');
+        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+        const durationDisplay = document.getElementById('durationDisplay');
+        const progressBarContainer = document.getElementById('progressBarContainer');
 
-        // Lista de servere de rezervă
         const API_SERVERS = [
             'https://pipedapi.smnz.de',
             'https://pipedapi.kavin.rocks',
@@ -66,61 +153,63 @@
             'https://pipedapi.leptons.xyz'
         ];
 
-        // Funcție inteligentă care trece la următorul server dacă unul e picat
+        // Declanșare căutare la apăsarea tastei Enter
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                searchMusic();
+                searchInput.blur(); // Ascunde tastatura
+            }
+        }
+
         async function fetchWithFallback(endpoint) {
             for (let server of API_SERVERS) {
                 try {
                     const response = await fetch(`${server}${endpoint}`);
-                    if (response.ok) {
-                        return await response.json();
-                    }
-                } catch (error) {
-                    console.log(`Serverul ${server} nu a răspuns. Se încearcă următorul...`);
-                }
+                    if (response.ok) return await response.json();
+                } catch (error) { console.log(`Server ${server} picat.`); }
             }
-            throw new Error('Toate serverele sunt aglomerate.');
+            throw new Error('Servere indisponibile.');
         }
 
         async function searchMusic() {
-            const query = document.getElementById('searchInput').value;
+            const query = searchInput.value;
             if (!query) return;
 
-            resultsContainer.innerHTML = '<p style="color: #b3b3b3; text-align: center;">Se caută pe YouTube...</p>';
+            resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Se caută...</p>';
 
             try {
                 const data = await fetchWithFallback(`/search?q=${encodeURIComponent(query)}&filter=music_songs`);
-                
                 resultsContainer.innerHTML = '';
                 
                 if (!data || !data.items || data.items.length === 0) {
-                    resultsContainer.innerHTML = '<p style="color: #b3b3b3; text-align: center;">Nu am găsit rezultate.</p>';
+                    resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Nu am găsit rezultate.</p>';
                     return;
                 }
 
                 data.items.forEach(track => {
                     const trackDiv = document.createElement('div');
                     trackDiv.className = 'track';
-                    
                     const videoId = track.url.split('watch?v=')[1];
                     const safeTitle = track.title.replace(/'/g, "\\'").replace(/"/g, "&quot;"); 
+                    const safeArtist = track.uploaderName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
                     trackDiv.innerHTML = `
-                        <div class="track-info" onclick="playTrack('${safeTitle}', '${videoId}')" style="flex: 1; min-width: 0;">
-                            <span class="track-title">${track.title}</span>
-                            <span class="track-artist">${track.uploaderName}</span>
+                        <div class="track-info" onclick="loadTrack('${safeTitle}', '${safeArtist}', '${videoId}')">
+                            <div class="track-title">${track.title}</div>
+                            <div class="track-artist">${track.uploaderName}</div>
                         </div>
                         <button class="cache-btn" onclick="cacheStream('${safeTitle}', '${videoId}')">Salvează</button>
                     `;
                     resultsContainer.appendChild(trackDiv);
                 });
             } catch (error) {
-                console.error(error);
-                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">A apărut o eroare de rețea. Mai încearcă o dată.</p>';
+                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare de rețea.</p>';
             }
         }
 
-        async function playTrack(title, videoId) {
-            nowPlayingText.innerText = "Se încarcă: " + title;
+        async function loadTrack(title, artist, videoId) {
+            playerTitle.innerText = "Se încarcă...";
+            playerArtist.innerText = artist;
             
             try {
                 const data = await fetchWithFallback(`/streams/${videoId}`);
@@ -128,33 +217,80 @@
                 if (data.audioStreams && data.audioStreams.length > 0) {
                     const audioStream = data.audioStreams.find(s => s.mimeType.includes('m4a')) || data.audioStreams[0];
                     audioPlayer.src = audioStream.url;
+                    playerTitle.innerText = title;
                     audioPlayer.play();
-                    nowPlayingText.innerText = "Se redă: " + title;
+                    updatePlayPauseUI(true);
                 } else {
-                    nowPlayingText.innerText = "Eroare: Nu am putut extrage sunetul.";
+                    playerTitle.innerText = "Eroare: Nu s-a putut extrage";
                 }
             } catch (error) {
-                nowPlayingText.innerText = "Eroare la redare. Încearcă altă piesă.";
+                playerTitle.innerText = "Eroare la redare.";
             }
         }
 
         async function cacheStream(title, videoId) {
-            alert('Se pregătește descărcarea pentru: ' + title);
+            alert('Se descarcă în cache: ' + title);
             try {
                 const data = await fetchWithFallback(`/streams/${videoId}`);
-                
                 if (data.audioStreams && data.audioStreams.length > 0) {
                     const audioStream = data.audioStreams.find(s => s.mimeType.includes('m4a')) || data.audioStreams[0];
                     const cache = await caches.open('muzica-offline-v1');
-                    
                     await cache.add(audioStream.url);
-                    alert('Salvat cu succes! Melodia a rămas în memoria telefonului.');
+                    alert('Salvat cu succes!');
                 }
-            } catch (error) {
-                console.error(error);
-                alert('Eroare la descărcare. Serverul ar putea interzice salvarea în acest moment.');
+            } catch (error) { alert('Eroare la descărcare.'); }
+        }
+
+        // LOGICĂ PLAYER CUSTOM
+        function togglePlay() {
+            if (audioPlayer.paused) {
+                if (audioPlayer.src) { audioPlayer.play(); updatePlayPauseUI(true); }
+            } else {
+                audioPlayer.pause();
+                updatePlayPauseUI(false);
             }
         }
+
+        function updatePlayPauseUI(isPlaying) {
+            if (isPlaying) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            } else {
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+            }
+        }
+
+        // Actualizare Bară Progres
+        audioPlayer.addEventListener('timeupdate', () => {
+            if (audioPlayer.duration) {
+                const progressPercent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                progressFill.style.width = progressPercent + '%';
+                currentTimeDisplay.innerText = formatTime(audioPlayer.currentTime);
+                durationDisplay.innerText = formatTime(audioPlayer.duration);
+            }
+        });
+
+        // Click pe bara de progres pentru a derula
+        function seekAudio(e) {
+            if (!audioPlayer.duration) return;
+            const rect = progressBarContainer.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const width = rect.width;
+            const clickPercent = clickX / width;
+            audioPlayer.currentTime = clickPercent * audioPlayer.duration;
+        }
+
+        // Formatare secundă în mm:ss
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        // Când se termină melodia
+        audioPlayer.addEventListener('ended', () => { updatePlayPauseUI(false); progressFill.style.width = '0%'; currentTimeDisplay.innerText = '0:00'; });
     </script>
 </body>
 </html>
