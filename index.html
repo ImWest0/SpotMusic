@@ -10,22 +10,18 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(180deg, #13081e 0%, #000000 20%, #000000 100%); color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Header cu Logo și Setări */
         header { padding: 20px 20px 10px 20px; display: flex; justify-content: space-between; align-items: center; }
         .spacer { width: 24px; }
         .logo-container { display: flex; justify-content: center; align-items: center; }
         .settings-icon { fill: #b3b3b3; width: 24px; height: 24px; cursor: pointer; }
         
-        /* Bara de căutare */
         .search-wrapper { padding: 0 20px 20px 20px; }
         .search-box { background-color: #1a1a1a; border-radius: 25px; border: 1px solid #333; padding: 15px 20px; display: flex; align-items: center; }
         .search-box input { background: transparent; border: none; color: white; font-size: 16px; width: 100%; outline: none; }
         .search-box input::placeholder { color: #888; }
         
-        /* Titlu Secțiune */
         .section-title { color: #f6c358; font-size: 13px; font-weight: bold; letter-spacing: 1px; padding: 0 20px 10px 20px; text-transform: uppercase; }
 
-        /* Lista de rezultate */
         #results { flex: 1; overflow-y: auto; padding: 0 20px 130px 20px; display: flex; flex-direction: column; gap: 12px; }
         .track { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1a1a1a; cursor: pointer; }
         .track:active { background-color: #1a1a1a; }
@@ -36,7 +32,6 @@
         .cache-btn { background-color: transparent; color: #f6c358; border: 1px solid #f6c358; border-radius: 15px; padding: 6px 12px; font-size: 11px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
         .cache-btn:active { background-color: #f6c358; color: black; }
 
-        /* Player Custom (Bottom) */
         #custom-player { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #121212; border-top: 1px solid #222; padding: 15px 20px 25px 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; }
         .player-info-row { display: flex; align-items: center; gap: 15px; }
         .album-art-placeholder { width: 45px; height: 45px; background-color: #222; border-radius: 8px; flex-shrink: 0; object-fit: cover; }
@@ -44,19 +39,16 @@
         .player-title { font-size: 15px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .player-subtitle { font-size: 13px; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         
-        /* Progress Bar */
         .progress-row { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #888; }
         .progress-bar-container { flex: 1; height: 4px; background-color: #333; border-radius: 2px; position: relative; cursor: pointer; padding: 10px 0; background-clip: content-box; }
         .progress-fill { position: absolute; left: 0; top: 10px; height: 4px; background-color: #fce181; border-radius: 2px; width: 0%; transition: width 0.1s linear; }
         
-        /* Controale Playback */
         .controls-row { display: flex; justify-content: center; align-items: center; gap: 30px; }
         .ctrl-btn { background: none; border: none; fill: #fff; width: 20px; height: 20px; cursor: pointer; }
         .play-btn-wrapper { width: 55px; height: 55px; background-color: #fce181; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px rgba(252, 225, 129, 0.3); cursor: pointer; }
         .play-icon { fill: #000; width: 22px; height: 22px; margin-left: 3px; }
         .pause-icon { fill: #000; width: 22px; height: 22px; display: none; }
         
-        /* Loader Animation */
         .loader { width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 1s linear infinite; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
@@ -80,11 +72,11 @@
 
     <div class="search-wrapper">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Caută piese sau artiști..." autocomplete="off" onkeypress="handleKeyPress(event)">
+            <input type="text" id="searchInput" placeholder="Caută piese sau artiști (ex. RAVA)..." autocomplete="off" onkeypress="handleKeyPress(event)">
         </div>
     </div>
 
-    <div class="section-title">Rezultate</div>
+    <div class="section-title">Rezultate YouTube</div>
 
     <div id="results">
         <p style="color: #555; text-align: center; margin-top: 20px; font-size: 14px;">Aștept să cauți o piesă...</p>
@@ -123,7 +115,6 @@
     <audio id="audioPlayer"></audio>
 
     <script>
-        // Înregistrare Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.error('Eroare SW:', err));
         }
@@ -143,11 +134,11 @@
         const durationDisplay = document.getElementById('durationDisplay');
         const progressBarContainer = document.getElementById('progressBarContainer');
 
-        // Servere backend YouTube robuste
-        const YT_APIS = [
-            'https://pipedapi.kavin.rocks',
-            'https://pipedapi.smnz.de',
-            'https://piped-api.lunar.icu'
+        // INSTANȚE INVIDIOUS (Proiectul GitHub suprem pentru extragere)
+        const INSTANCES = [
+            'https://invidious.jing.rocks',
+            'https://invidious.nerdvpn.de',
+            'https://inv.tux.pizza'
         ];
 
         function handleKeyPress(e) {
@@ -157,106 +148,91 @@
             }
         }
 
-        // PASUL 1: Căutare instanță pe API-ul Apple (Rapid, Fără Erori, Cu Imagini)
+        async function fetchWithFallback(queryPath) {
+            for (let server of INSTANCES) {
+                try {
+                    const response = await fetch(`${server}${queryPath}`);
+                    if (response.ok) return await response.json();
+                } catch (error) { console.log(`${server} nu a răspuns.`); }
+            }
+            throw new Error('Toate serverele Invidious sunt ocupate.');
+        }
+
         async function searchMusic() {
             const query = searchInput.value.trim();
             if (!query) return;
 
-            resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Se caută pe servere...</p>';
+            resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Se descarcă din baza YouTube...</p>';
 
             try {
-                // Interogăm baza de date muzicală Apple
-                const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`);
-                const data = await response.json();
-                
+                // Căutare directă pe YouTube via Invidious API
+                const data = await fetchWithFallback(`/api/v1/search?q=${encodeURIComponent(query)}&type=video`);
                 resultsContainer.innerHTML = '';
                 
-                if (!data.results || data.results.length === 0) {
-                    resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Nu am găsit rezultate.</p>';
+                if (!data || data.length === 0) {
+                    resultsContainer.innerHTML = '<p style="color: #888; text-align: center;">Niciun rezultat.</p>';
                     return;
                 }
 
-                data.results.forEach(track => {
-                    const safeTitle = track.trackName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const safeArtist = track.artistName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const coverUrl = track.artworkUrl100.replace('100x100bb', '300x300bb'); // Imagine la claritate mare
+                data.forEach(track => {
+                    const safeTitle = track.title.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const safeArtist = track.author.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const coverUrl = track.videoThumbnails.find(t => t.quality === 'medium')?.url || track.videoThumbnails[0].url;
 
                     const trackDiv = document.createElement('div');
                     trackDiv.className = 'track';
                     trackDiv.innerHTML = `
                         <img src="${coverUrl}" class="track-img" alt="cover">
-                        <div class="track-info" onclick="fetchAndPlay('${safeTitle}', '${safeArtist}', '${coverUrl}')">
-                            <div class="track-title">${track.trackName}</div>
-                            <div class="track-artist">${track.artistName}</div>
+                        <div class="track-info" onclick="playDirectly('${safeTitle}', '${safeArtist}', '${track.videoId}', '${coverUrl}')">
+                            <div class="track-title">${track.title}</div>
+                            <div class="track-artist">${track.author}</div>
                         </div>
-                        <button class="cache-btn" onclick="fetchAndCache('${safeTitle}', '${safeArtist}')">Descarcă</button>
+                        <button class="cache-btn" onclick="cacheDirectly('${safeTitle}', '${track.videoId}')">Descarcă</button>
                     `;
                     resultsContainer.appendChild(trackDiv);
                 });
             } catch (error) {
-                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare. Verifică conexiunea la net.</p>';
+                resultsContainer.innerHTML = '<p style="color: #e57373; text-align: center;">Eroare. Verifică conexiunea.</p>';
             }
         }
 
-        // PASUL 2: Extragerea sunetului de pe YouTube pe baza titlului apăsat
-        async function getAudioStream(title, artist) {
-            const ytQuery = `${title} ${artist} audio`;
-            
-            for (let api of YT_APIS) {
-                try {
-                    const searchRes = await fetch(`${api}/search?q=${encodeURIComponent(ytQuery)}&filter=all`);
-                    if (!searchRes.ok) continue;
-                    
-                    const searchData = await searchRes.json();
-                    if (searchData.items && searchData.items.length > 0) {
-                        const videoId = searchData.items[0].url.split('?v=')[1];
-                        
-                        const streamRes = await fetch(`${api}/streams/${videoId}`);
-                        const streamData = await streamRes.json();
-                        
-                        // Căutăm cel mai bun format audio m4a sau mp4a
-                        const audioUrl = streamData.audioStreams.find(s => s.mimeType.includes('m4a'))?.url || streamData.audioStreams[0]?.url;
-                        if (audioUrl) return audioUrl;
-                    }
-                } catch (error) {
-                    console.log("Încerc alt server...");
-                }
-            }
-            throw new Error("Nu am putut găsi stream-ul audio.");
+        // REDARE DIRECTĂ (Sari peste proxy, folosește itag 140 m4a standard YouTube)
+        function getDirectAudioUrl(videoId) {
+            // Primul server din listă redirecționează automat către stream-ul audio curat
+            return `${INSTANCES[0]}/latest_version?id=${videoId}&itag=140`;
         }
 
-        async function fetchAndPlay(title, artist, cover) {
-            // Actualizăm UI-ul instant
+        function playDirectly(title, artist, videoId, cover) {
             playerTitle.innerText = title;
             playerArtist.innerText = artist;
             playerCover.src = cover;
             
-            // Afișăm animația de încărcare pe butonul de play
             playIcon.style.display = 'none';
             pauseIcon.style.display = 'none';
             playerLoader.style.display = 'block';
 
-            try {
-                const audioUrl = await getAudioStream(title, artist);
-                audioPlayer.src = audioUrl;
-                audioPlayer.play();
+            const audioUrl = getDirectAudioUrl(videoId);
+            audioPlayer.src = audioUrl;
+            
+            audioPlayer.play().then(() => {
                 updatePlayPauseUI(true);
-            } catch (error) {
-                playerTitle.innerText = "Eroare la redare.";
+            }).catch(e => {
+                playerTitle.innerText = "Blocat de server. Încearcă altă piesă.";
                 updatePlayPauseUI(false);
-                alert("Nu am putut conecta fluxul audio. Serverele sunt suprasolicitate.");
-            }
+            });
         }
 
-        async function fetchAndCache(title, artist) {
-            alert(`Caut serverele de descărcare pentru: ${title}... Așteaptă confirmarea.`);
+        async function cacheDirectly(title, videoId) {
+            alert(`Se descarcă în memoria telefonului: ${title}`);
             try {
-                const audioUrl = await getAudioStream(title, artist);
+                const audioUrl = getDirectAudioUrl(videoId);
                 const cache = await caches.open('muzica-offline-v1');
+                
+                // Cerem fișierul audio și îl băgăm direct în cache
                 await cache.add(audioUrl);
-                alert(`Succes! Melodia "${title}" a fost salvată în cache.`);
+                alert(`Succes! Melodia poate fi ascultată offline.`);
             } catch (error) {
-                alert(`Eroare la salvare pentru "${title}". Browserul a refuzat descărcarea.`);
+                alert(`Eroare. Cache-ul browserului a refuzat fișierul.`);
             }
         }
 
@@ -273,7 +249,7 @@
         }
 
         function updatePlayPauseUI(isPlaying) {
-            playerLoader.style.display = 'none'; // Oprim mereu animația de încărcare
+            playerLoader.style.display = 'none';
             if (isPlaying) {
                 playIcon.style.display = 'none';
                 pauseIcon.style.display = 'block';
@@ -296,8 +272,7 @@
             if (!audioPlayer.duration) return;
             const rect = progressBarContainer.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
-            const width = rect.width;
-            const clickPercent = clickX / width;
+            const clickPercent = clickX / rect.width;
             audioPlayer.currentTime = clickPercent * audioPlayer.duration;
         }
 
